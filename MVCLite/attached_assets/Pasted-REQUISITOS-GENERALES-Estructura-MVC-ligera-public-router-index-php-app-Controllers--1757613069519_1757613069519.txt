@@ -1,0 +1,74 @@
+REQUISITOS GENERALES
+- Estructura MVC ligera:
+  /public (router index.php)
+  /app/Controllers
+  /app/Models
+  /app/Views (plantilla base con Bootstrap 5 por CDN)
+  /app/Database (conexion.php y migraciones.php)
+  /assets (css/js)
+  /data/database.sqlite (archivo de SQLite)
+- Usar PDO con prepared statements. Validación básica (requeridos, longitudes).
+- Rutas simples por querystring: ?page=campanias|grupos|anuncios|completo&action=list|create|edit|delete
+- Nav superior con enlaces a: Campañas, Grupos de anuncios, Anuncios, Completo y Buscar.
+- Crear “migraciones.php” que construya las tablas si no existen. Ejecutarla automáticamente en el primer arranque.
+
+MODELO DE DATOS (mapear desde mi Excel)
+Tablas y campos (ignora columnas “Columna1/2/3” del Excel):
+
+1) campaigns
+  - id INTEGER PRIMARY KEY AUTOINCREMENT
+  - medio TEXT                -- (Excel: MEDIO)
+  - programa_interes TEXT     -- (PROGRAMA DE INTERES)
+  - tipo_campana TEXT         -- (Tipo de campaña)
+  - nomenclatura_programa TEXT
+  - modalidad_estudio TEXT    -- (Modalidad de Estudio)
+  - linea TEXT                -- (Linea)
+  - facultad TEXT             -- (Facultad)
+  - nomenclatura_modalidad TEXT
+  - nomenclatura_linea TEXT
+  - nomenclatura_tipo_campana TEXT
+  - nomenclatura_modalidad3 TEXT
+  - nombre_sf TEXT            -- (Nombre SF)
+  - url_programa TEXT         -- (URL programa)
+  - lista_pardot TEXT         -- (Lista Pardot)
+  - nombre_campania TEXT      -- (Nombre de Campaña)
+  - created_at TEXT, updated_at TEXT
+
+2) ad_groups
+  - id INTEGER PRIMARY KEY AUTOINCREMENT
+  - campaign_id INTEGER NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE
+  - fsa TEXT                  -- (FSA)
+  - cohorte TEXT              -- (COHORTE)
+  - tipo_publico TEXT         -- (Tipo de Público)
+  - numero_grupo INTEGER      -- (Numero de Grupo de Anuncio)
+  - nomenclatura_pardot TEXT  -- (Nomenclatura Pardot)
+  - nombre_grupo TEXT         -- (Nombre de Grupo de Anuncio)
+  - created_at TEXT, updated_at TEXT
+  INDEXES: (campaign_id), (numero_grupo)
+
+3) ads
+  - id INTEGER PRIMARY KEY AUTOINCREMENT
+  - ad_group_id INTEGER NOT NULL REFERENCES ad_groups(id) ON DELETE CASCADE
+  - tipo_anuncio TEXT         -- (Tipo de Anuncio)
+  - numero_grupo INTEGER      -- (Numero de Grupo de Anuncio)
+  - nomenclatura_pardot TEXT  -- (Nomenclatura Pardot)
+  - nombre_anuncio TEXT       -- (Nombre de Anuncio)
+  - created_at TEXT, updated_at TEXT
+  INDEXES: (ad_group_id), (numero_grupo)
+
+FORMULARIOS (CRUD)
+- Campañas: crear/editar con todos los campos de la tabla campaigns. Validar requeridos: medio, programa_interes, tipo_campana, nombre_campania.
+- Grupos: dropdown para seleccionar campaña (campaign_id); resto de campos como arriba.
+- Anuncios: dropdown para seleccionar grupo (ad_group_id); resto de campos como arriba.
+- Botones de Editar y Eliminar (confirmación). Borrado real (DELETE) está bien.
+
+BÚSQUEDA
+- Página “Buscar” (?page=buscar) con filtros por: nombre_campania, medio, programa_interes, facultad, tipo_campana. 
+- Resultado en tabla con paginación simple (limit/offset) y columnas: Campaña, Medio, Programa, Facultad, Tipo, #Grupos, #Anuncios.
+- Consultas con LIKE y JOIN + COUNT DISTINCT.
+
+VISTA “COMPLETO”
+- Tabla plana que una campaigns → ad_groups → ads (LEFT JOIN) mostrando por fila:
+  [Campaña, Medio, Programa, Facultad, Tipo de campaña, Línea, Modalidad, Lista Pardot, URL programa, Grupo (numero_grupo + nombre_grupo), FSA, Cohorte, Tipo de Público, Anuncio (nombre_anuncio), Tipo de anuncio, Nomenclaturas]
+- Alternativamente una vista jerárquica (acordeones): cada campaña se expande a sus grupos y cada grupo a sus anuncios.
+- Botón “Exportar CSV” del resultado actual.
